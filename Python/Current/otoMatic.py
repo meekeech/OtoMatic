@@ -14,8 +14,8 @@ import csv
 
 
 running = 1
-
-    
+frameNum = 0
+fileName = datetime.datetime.now().strftime('oto_matic-%Y-%m-%d-%H-%M.')    
  
 q = queue.Queue()
     
@@ -197,35 +197,54 @@ def CreateHistogram(frm):
 
 class camWindow(threading.Thread):
     def run(self):
+        global running
+        global frameNum
         print('Starting CSV Writer')
         capture = cv2.VideoCapture(0)
+
+        #preCapture for sizing...
+        ret, frame = capture.read()
+        fshape = frame.shape
+        fheight = fshape[0]
+        fwidth = fshape[1]
+
+        # Create output write
+        vid_cod = cv2.VideoWriter_fourcc(*'H264')
+        #vid_cod = -1
+        vidOutput = cv2.VideoWriter(fileName +'mp4', vid_cod, 20.0, (fwidth, fheight)) 
 
         while(1):
             print('Capturing frame')
             ret, frame = capture.read()
             cv2.imshow('video', frame)
+            vidOutput.write(frame)
+            frameNum += 1
             if cv2.waitKey(1) == 27:
                 running = 0
                 break
-            
+            time.sleep(0.01)         
         capture.release()
+        vidOutput.release()
         cv2.destroyAllWindows()
+        print('Ending camWindow')
          
 class csvWriter(threading.Thread):
     def run(self):
         print('Starting CSV Writer')  
         
-        filename = datetime.datetime.now().strftime('oto_matic-%Y-%m-%d-%H-%M.csv')
+        
 
-        with open(filename, 'w+') as csvfile:
+        with open(fileName + 'csv', 'w+') as csvfile:
             csvwriter = csv.writer(csvfile, dialect='excel')
-            csvwriter.writerow(['Left Button', 'Right Button', 'Soleonid','Pump','CO2','O2','Humidity','Pressure','Flow'])
-            
+            csvwriter.writerow(['Frame #','Time','Left Button', 'Right Button', 'Soleonid','Pump','CO2','O2','Humidity','Pressure','Flow'])
+            startTime = time.perf_counter_ns()
             while (running):
                 if q.qsize() > 0:
                     data = q.get()
 #                    print(data)
-                    csvwriter.writerow([data[0],data[1],data[2],data[3],data[4],data[5],data[6],data[7],data[8]])
+                    csvwriter.writerow([frameNum,time.perf_counter_ns() - startTime, data[0],data[1],data[2],data[3],data[4],data[5],data[6],data[7],data[8]])
+                else:
+                    time.sleep(0.01)
                     #csvwriter.writerow(data)
             print('Closing File')
             csvfile.close()
@@ -273,19 +292,24 @@ class serialListener(threading.Thread):
    #             print(q.qsize())
 #            else :
 #                print('Serial in waiting :', ser.in_waiting)
+        print('Closing serialListener')
 
    
 def main():
     print('Main')
+    global running
+    running = 1
  
     csvWriter().start()
     serialListener().start()
     camWindow().start()
-    running = 1
+ 
     while(running):
 # Collect events until released
                
         time.sleep(2)
+    print('Closing Main')
+    time.sleep(2)
 '''
     global upperX
     global upperY
