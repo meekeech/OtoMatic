@@ -18,6 +18,7 @@ frameNum = 0
 fileName = datetime.datetime.now().strftime('oto_matic-%Y-%m-%d-%H-%M.')    
  
 q = queue.Queue()
+vq = queue.Queue()
     
 #Serial
 ser = serial.Serial() #create serial instance to allow serial communication
@@ -195,12 +196,29 @@ def CreateHistogram(frm):
         ax[4,1].set_xlim(0,256)    
         ax[4,1].set_ylim(0,50000)
 
-class camWindow(threading.Thread):
+class vidDisplay(threading.Thread):
+    def run(self):
+        global running
+        print('Starting Vid Display')
+
+        while (running):
+            if vq.qsize() > 0:
+                print('showing frame')
+                frame = vq.get()
+                cv2.imshow('Video', frame)
+            time.sleep(0.01)
+            if cv2.waitKey(1) == 27:
+                running = 0
+                break
+        
+        
+class camReader(threading.Thread):
     def run(self):
         global running
         global frameNum
-        print('Starting CSV Writer')
+        print('Starting Cam Reader')
         capture = cv2.VideoCapture(0)
+        
 
         #preCapture for sizing...
         ret, frame = capture.read()
@@ -208,20 +226,27 @@ class camWindow(threading.Thread):
         fheight = fshape[0]
         fwidth = fshape[1]
 
+        print('A')
         # Create output write
-        vid_cod = cv2.VideoWriter_fourcc(*'H264')
+        #vid_cod = cv2.VideoWriter_fourcc(*'H264')
         #vid_cod = -1
-        vidOutput = cv2.VideoWriter(fileName +'mp4', vid_cod, 20.0, (fwidth, fheight)) 
+        #vidOutput = cv2.VideoWriter(fileName +'mp4', vid_cod, 20.0, (fwidth, fheight)) 
 
         while(1):
             print('Capturing frame')
+            startT = time.perf_counter_ns()
             ret, frame = capture.read()
-            cv2.imshow('video', frame)
-            vidOutput.write(frame)
+            #readT =  time.perf_counter_ns()
+            #cv2.imshow('video', frame)
+            #showT =  time.perf_counter_ns()
+            #vidOutput.write(frame)
+            vq.put(frame)
+            writeT =  time.perf_counter_ns()
+            
+            #print( 'Read :', readT - startT, '  Show:', showT-readT, '  Write:', writeT-showT)
+            print ('tic toc:', (writeT- startT)/1000000)
             frameNum += 1
-            if cv2.waitKey(1) == 27:
-                running = 0
-                break
+
             time.sleep(0.01)         
         capture.release()
         vidOutput.release()
@@ -231,9 +256,6 @@ class camWindow(threading.Thread):
 class csvWriter(threading.Thread):
     def run(self):
         print('Starting CSV Writer')  
-        
-        
-
         with open(fileName + 'csv', 'w+') as csvfile:
             csvwriter = csv.writer(csvfile, dialect='excel')
             csvwriter.writerow(['Frame #','Time','Left Button', 'Right Button', 'Soleonid','Pump','CO2','O2','Humidity','Pressure','Flow'])
@@ -302,7 +324,9 @@ def main():
  
     csvWriter().start()
     serialListener().start()
-    camWindow().start()
+    vidDisplay().start()
+    time.sleep(2)
+    camReader().start()
  
     while(running):
 # Collect events until released
