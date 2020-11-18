@@ -88,21 +88,7 @@ def handle_close(evt):
     running = 0
     #sys.exit()
 
-        
-def ReadData(data,numBytes,appendTrue,display):
-    if numBytes == 1:
-        readVal = ser.read(1).decode()
-        if display == True:
-            print(readVal,end='')
-    if numBytes == 2:
-        readVal = ser.read(2)
-        readVal = struct.unpack(">H",readVal)[0]
-        if display == True:
-            print(readVal,end='')
-    if appendTrue == 1:
-        data = np.append(data,[readVal])
-        
-    return data
+
 
 
 def SetPlot():
@@ -272,6 +258,24 @@ class vidDisplay(threading.Thread):
         
         cv2.destroyAllWindows()
         
+        
+        
+        
+def ReadData(data,numBytes,appendTrue,display):
+    if numBytes == 1:
+        readVal = ser.read(1).decode()
+        if display == True:
+            print(readVal,end='')
+    if numBytes == 2:
+        readVal = ser.read(2)
+        readVal = struct.unpack(">H",readVal)[0]
+        if display == True:
+            print(readVal,end='')
+    if appendTrue == 1:
+        data = np.append(data,[readVal])
+        
+    return data
+    
 class serialListener(threading.Thread):
   
     def run(self):
@@ -327,6 +331,7 @@ class serialListener(threading.Thread):
                 saveQueue.put(dataRow)
                 dataPlot = dataRow.astype(int)
                 newData=True
+
 
 
    

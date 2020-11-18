@@ -63,11 +63,18 @@ def on_message(client, userdata, msg):
     publish.single(PI4_PATH,byteArr,hostname = PI4_SERVER)
     # more callbacks, etc
     
+def InitializeMQTT():
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    
+    client.connect_async(PI4_SERVER, 1883, 60)
+    client.loop_start()
     
     
 def ReadData(data,numBytes,appendTrue,display):
     if numBytes == 1:
-        readVal = ser.read(1).decode()
+        readVal = ser.read(1)
         if display == True:
             print(readVal,end='')
     if numBytes == 2:
@@ -80,13 +87,7 @@ def ReadData(data,numBytes,appendTrue,display):
         
     return data
     
-def InitializeMQTT():
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_message = on_message
-    
-    client.connect_async(PI4_SERVER, 1883, 60)
-    client.loop_start()
+
 
 
 class serialListener(threading.Thread):
@@ -114,15 +115,18 @@ class serialListener(threading.Thread):
                 dataRow = ReadData(dataRow,2,1,printTrue) # Pressure reading
                 
                 
-                if (dataRow[0] == '1'):
+                if (dataRow[0].decode() == '1'):
+                    sendData = str(dataRow[2].decode())+str(dataRow[3].decode())+str(dataRow[4].decode())
+                    #sendArray = bytearray([dataRow[2],dataRow[3]])
                     #read pressure and send to Rpi4
-                    publish.single(PI4_PATH2,dataRow[4],hostname = PI4_SERVER)
+                    publish.single(PI4_PATH2,sendData,hostname = PI4_SERVER)
                     #print("a")
                     
                 if printTrue == True:
                     print('')
                 # Clear the buffer
-                #readByte = ser.readline()
+                #readByte = ser.readline()s
+                
                 
                 newData=True
 
