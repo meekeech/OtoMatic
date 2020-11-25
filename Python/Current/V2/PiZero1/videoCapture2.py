@@ -9,7 +9,7 @@ from pygame.locals import*
 
 
 import paho.mqtt.publish as publish
-PI4_SERVER = "192.168.0.75"
+PI4_SERVER = "192.168.0.139"
 PIZ_PATH = "piz1-piz2"
 PI4_PATH = "piz1-pi4"
 
@@ -27,10 +27,11 @@ class Capture(object):
     def __init__(self):
 	#352,288
     #400,380
-        self.size = (352,288)
+        #self.size = (352,288)
+        self.size = (400,380)
         # create a display surface. standard pygame stuff
-        #self.display = pygame.display.set_mode(self.size, pygame.FULLSCREEN)
-        self.display = pygame.display.set_mode(self.size, 0)
+        self.display = pygame.display.set_mode(self.size, pygame.FULLSCREEN)
+        #self.display = pygame.display.set_mode(self.size, 0)
 
 
         # this is the same as what we saw before
