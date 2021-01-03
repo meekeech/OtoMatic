@@ -101,6 +101,7 @@ def main():
                 # close the camera safely
                 capture.cam.stop()
                 going = False
+                GPIO.cleanup()
             
 
         sendPhoto = capture.get_and_flip(sendPhoto)
