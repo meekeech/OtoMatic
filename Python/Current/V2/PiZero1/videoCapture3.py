@@ -4,6 +4,8 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 import pygame.camera
 import math
+import RPi.GPIO as GPIO  
+
 
 from pygame.locals import*
 
@@ -13,6 +15,8 @@ PI4_SERVER = "192.168.0.75"
 PI4_PATH = "piz1-pi4"
 
 
+GPIO.setmode(GPIO.BCM)  
+GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 pygame.init()
 
@@ -73,19 +77,19 @@ class Capture(object):
             
             
         return False
-
+        
+        
+def my_callback(channel): 
+    sendPhoto = True
  
 def main():
-   
+    
     
     capture = Capture()
     going = True
     sendPhoto = False
+    GPIO.add_event_detect(26, GPIO.FALLING, callback=my_callback,bouncetime = 100) 
     
-    #s2 = pygame.Surface((50,50))
-    #s2.set_alpha(128)
-    #s2.fill((255,255,255))
-    #btn = pygame.Rect(100,100,50,50)
     
     
     while going:
