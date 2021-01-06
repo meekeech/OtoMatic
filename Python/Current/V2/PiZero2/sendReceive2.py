@@ -16,8 +16,8 @@ import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)  
 GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP)
  
-#pygame.init()
-#pygame.camera.init()
+pygame.init()
+pygame.camera.init()
 #cam = pygame.camera.Camera("/dev/video0",(400,380))
 #cam.start()
  
@@ -27,6 +27,9 @@ dataRow = np.array([])
 newData = False
 running = 1
 
+sendPhoto = False
+
+current_milli_time = lambda: int(round(time.time() * 1000))
 
 ser = serial.Serial (
         port = '/dev/ttyS0',
@@ -39,7 +42,8 @@ ser = serial.Serial (
 
 
 
-PI4_SERVER = "192.168.0.139"
+#PI4_SERVER = "192.168.0.139"
+PI4_SERVER = "192.168.2.100" #home
 PI4_PATH = "piz2-pi4-img"
 PI4_PATH2 = "piz2-pi4-data"
 
@@ -60,7 +64,28 @@ def ReadData(data,numBytes,appendTrue,display):
     return data
     
 
+class Capture(object):
+    
+    def __init__(self):
+        #self.size = (352,288)
+        self.size = (400,380)
+        self.cam = pygame.camera.Camera("/dev/video0",self.size)
+        self.cam.start()
 
+        
+    def get_snapshot(self):
+        #Must call three times or the photo won't update
+        self.snapshot = self.cam.get_image()
+        self.snapshot = self.cam.get_image()
+        self.snapshot = self.cam.get_image() 
+        #timestr = time.strftime("%Y%m%d-%H%M%S")
+        timestr = str(current_milli_time())
+        fileName = "img-"+timestr+".jpg"
+        pygame.image.save(self.snapshot,fileName)
+        f = open(fileName,"rb")
+        fileContent = f.read()
+        byteArr = bytearray(fileContent)
+        publish.single(PI4_PATH,byteArr,hostname = PI4_SERVER)
 
 class serialListener(threading.Thread):
   
@@ -107,22 +132,24 @@ def handle_close(evt):
     running = 0
 
 def my_callback(channel): 
-    #image = cam.get_image()
-    #pygame.image.save(image,"sentImage2.jpg")
-    f = open("sentImage2.jpg","rb")
-    fileContent = f.read()
-    byteArr = bytearray(fileContent)
-    publish.single(PI4_PATH,byteArr,hostname = PI4_SERVER)
+    global sendPhoto
+    sendPhoto = True
 
 def main():
     
-    GPIO.add_event_detect(26, GPIO.FALLING, callback=my_callback,bouncetime = 100) 
-
-
-    #serialListener().start()
+    GPIO.add_event_detect(26, GPIO.FALLING, callback=my_callback,bouncetime = 150) 
+    global running
+    global sendPhoto
+    capture = Capture()
     
-    while(running):
-        pass
+    
+    serialListener().start()
+    
+    while running:
+        if sendPhoto is True:
+            capture.get_snapshot()
+            sendPhoto = False
+            
         
     cam.stop()
     GPIO.cleanup()
