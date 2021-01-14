@@ -11,6 +11,19 @@
 #define BIN2 4
 #define PWMB 5
 
+#define CO2PIN A0
+#define O2PIN A1
+#define HUMIDPIN  A2
+#define TEMPPIN A3
+
+
+int temp1 = 0;
+float tempVolts = 0;
+float tempReal = 0;
+int co2Raw;
+int o2Raw;
+int humidRaw;
+
 Motor pump1 = Motor(AIN1, AIN2, PWMA, 1, STBY);
 Motor fan1 = Motor(BIN1, BIN2, PWMB, 1, STBY);
 
@@ -31,12 +44,29 @@ void setup() {
   pinMode(13, OUTPUT);
   pinMode(2, INPUT);
 
+
+  fan1.drive(200);
+  //pump1.drive(-255);
+
+  //delay(2000);
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  //  temp1 = analogRead(A3);
+  //  tempVolts = temp1 * 4.8876;
+  //  tempReal = (tempVolts - 500) / 10;
 
+  //humidRaw = analogRead(HUMIDPIN);
+  //o2Raw = analogRead(O2PIN);
+  //co2Raw = analogRead(O2PIN);
 
+  //Serial.print(humidRaw);
+  //Serial.print(" ");
+  //Serial.print("\n");
+
+  //delay(100);
   recvOneChar();
   showNewData();
 }
@@ -48,17 +78,31 @@ void recvOneChar() {
     NOP;
     newData = true;
   }
+  
 }
 
 void showNewData() {
   if (newData == true) {
     if (inByte == 'f') {
       //startMotor = true;
-      pump1.drive(255);
-
-
+      pump1.drive(127);
     }
+
+
+    if (inByte == 'r') {
+      pump1.drive(-127);
+    }
+    
+
+
+    if (inByte == 's') {
+      pump1.brake();
+      //fan1.brake();
+    }
+
     newData = false;
     doOnce = true;
+
   }
+
 }
