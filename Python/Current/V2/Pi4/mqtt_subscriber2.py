@@ -1,3 +1,8 @@
+#Working Code that pushes received data to file
+#Requires tempreature reading first since a C will close the file and
+#no way to re-open it with this code
+
+
 import paho.mqtt.client as mqtt
 import time
 import RPi.GPIO as GPIO

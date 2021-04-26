@@ -207,8 +207,5 @@ def main():
     client.loop_stop()
 
 
-
-
-
 if __name__ == '__main__':
     main()
