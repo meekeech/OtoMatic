@@ -19,7 +19,7 @@ win_img = "new"
 win_img_old = "old"
 slider1 = "Sliders"
 
-pic = cv2.imread("/home/pi/Documents/ColorMods/test.jpg", cv2.IMREAD_UNCHANGED)
+pic = cv2.imread("/home/pi/Documents/OtoMatic/Python/Current/V2/PiZero1/test.jpg", cv2.IMREAD_UNCHANGED)
 pic2 = pic.copy()
 
 # Display the original image for comparison

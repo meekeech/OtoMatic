@@ -42,6 +42,9 @@ class Capture(object):
     def get_and_flip(self):
         if self.cam.query_image():
             self.snapshot = self.cam.get_image(self.snapshot)
+        self.snapCopy = pygame.surfarray.array3d(self.snapshot)
+        self.snapCopy = self.snapCopy.transpose([1,0,2])
+        img_bgr = cv2.cvtColor(view,cv2,COLOR_RGB2BGR)
         self.display.blit(self.snapshot, (0,0))
         pygame.display.flip()
             
