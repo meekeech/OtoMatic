@@ -1,4 +1,9 @@
-import time 
+#click functionality to allow photo taking without physical button
+#Hid the circle so just need to click almost anywhere on the screen 
+#Disp means display image is active
+
+
+mport time 
 import serial #import serial and time libraries
 import numpy as np 
 import datetime as dt 
@@ -12,6 +17,11 @@ import pygame.camera
 from pygame.locals import *
 import os
 import RPi.GPIO as GPIO  
+import math
+
+circX = 190
+circY = 200
+circRad = 200
 
 GPIO.setmode(GPIO.BCM)  
 GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -68,19 +78,29 @@ class Capture(object):
     def __init__(self):
         #self.size = (352,288)
         self.size = (400,380)
+        self.display = pygame.display.set_mode(self.size, 0)
         self.cam = pygame.camera.Camera("/dev/video0",self.size)
         self.cam.start()
+        self.snapshot = pygame.surface.Surface(self.size, 0, self.display)
         GPIO.add_event_detect(26, GPIO.FALLING, callback=self.get_snapshot,bouncetime = 150) 
         self.sendTrue = False
         
     def get_and_flip(self):
         if self.cam.query_image():
             self.snapshot = self.cam.get_image()
+        #pygame.draw.circle(self.snapshot,[255,255,255],(circX,circY),circRad)
+        self.display.blit(self.snapshot, (0,0))
+        pygame.display.flip()
         
     def get_snapshot(self,channel):
         self.snapcopy = self.snapshot
         self.timestr = str(current_milli_time())
         self.sendTrue = True
+        
+    def set_setTrue(self,val):
+        self.snapcopy = self.snapshot
+        self.timestr = str(current_milli_time())
+        self.sendTrue = val
             
     def send_snapshot(self):
         if self.sendTrue is True:
@@ -165,7 +185,17 @@ def main():
         capture.get_and_flip()
         capture.send_snapshot()
         
-        pass
+        events = pygame.event.get()
+        for e in events:
+            if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
+                capture.cam.stop()
+                going = False
+                GPIO.cleanup()
+            if(e.type == pygame.MOUSEBUTTONDOWN):
+                        mouse_pos = e.pos
+                        dist = math.hypot(mouse_pos[0]-circX,mouse_pos[1]-circY)
+                        if dist <= circRad:
+                            capture.set_setTrue(True)
                 
 
             

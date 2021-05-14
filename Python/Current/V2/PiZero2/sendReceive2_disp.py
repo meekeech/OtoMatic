@@ -68,14 +68,18 @@ class Capture(object):
     def __init__(self):
         #self.size = (352,288)
         self.size = (400,380)
+        self.display = pygame.display.set_mode(self.size, 0)
         self.cam = pygame.camera.Camera("/dev/video0",self.size)
         self.cam.start()
+        self.snapshot = pygame.surface.Surface(self.size, 0, self.display)
         GPIO.add_event_detect(26, GPIO.FALLING, callback=self.get_snapshot,bouncetime = 150) 
         self.sendTrue = False
         
     def get_and_flip(self):
         if self.cam.query_image():
             self.snapshot = self.cam.get_image()
+        self.display.blit(self.snapshot, (0,0))
+        pygame.display.flip()
         
     def get_snapshot(self,channel):
         self.snapcopy = self.snapshot
@@ -165,7 +169,12 @@ def main():
         capture.get_and_flip()
         capture.send_snapshot()
         
-        pass
+        events = pygame.event.get()
+        for e in events:
+            if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
+                capture.cam.stop()
+                going = False
+                GPIO.cleanup()
                 
 
             
