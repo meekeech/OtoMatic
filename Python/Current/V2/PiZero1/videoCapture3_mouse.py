@@ -1,19 +1,16 @@
-#Attempt to apply colour modification code to display. 
-#Only added increase to blue channel and code is already much slower
-#Pending Compute module 4 display to continue integration
-
-
 import os
-import cv2
-import numpy as np
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import time
 import pygame
 import pygame.camera
 import math
-import RPi.GPIO as GPIO  
+import RPi.GPIO as GPIO 
 from pygame.locals import *
 import paho.mqtt.publish as publish
+
+circX = 190
+circY = 200
+circRad = 200
 
 PI4_SERVER = "192.168.0.139"
 #PI4_SERVER = "192.168.2.100" #home
@@ -43,25 +40,28 @@ class Capture(object):
         self.cam = pygame.camera.Camera("/dev/video0",self.size)
         self.cam.start()
         self.snapshot = pygame.surface.Surface(self.size, 0, self.display)
+        self.circ1 = pygame.surface.Surface(self.size, 0, self.display)
         GPIO.add_event_detect(26, GPIO.FALLING, callback=self.get_snapshot,bouncetime = 150) 
         self.sendTrue = False
         
     def get_and_flip(self):
         if self.cam.query_image():
             self.snapshot = self.cam.get_image(self.snapshot)
-            self.snapCopy2 = pygame.surfarray.array3d(self.snapshot)
-            #self.snapCopy2 = self.snapCopy2.transpose([1,0,2])
-            self.snapCopy2[:,:,2] = np.array(self.snapCopy2[:,:,1] *1.8,dtype = np.float64) 
-            self.snapCopy2[:,:,2] = np.uint8(np.clip(self.snapCopy2[:,:,1],0,255))
-            self.snapCopy2 = pygame.surfarray.make_surface(self.snapCopy2)
-            #img_bgr = cv2.cvtColor(self.snapCopy2,cv2.COLOR_RGB2BGR)
-        self.display.blit(self.snapCopy2, (0,0))
+        #self.circ1 = self.snapshot
+        #pygame.draw.circle(self.snapshot,[255,255,255],(circX,circY),circRad)
+        self.display.blit(self.snapshot,(0,0))
+        #self.display.blit(self.snapshot, (0,0))
         pygame.display.flip()
             
     def get_snapshot(self,channel):
         self.snapcopy = self.snapshot
         self.timestr = str(current_milli_time())
         self.sendTrue = True
+        
+    def set_setTrue(self,val):
+        self.snapcopy = self.snapshot
+        self.timestr = str(current_milli_time())
+        self.sendTrue = val
         
     def send_snapshot(self):
         if self.sendTrue is True:
@@ -90,6 +90,11 @@ def main():
                 capture.cam.stop()
                 going = False
                 GPIO.cleanup()
+            if(e.type == pygame.MOUSEBUTTONDOWN):
+                    mouse_pos = e.pos
+                    dist = math.hypot(mouse_pos[0]-circX,mouse_pos[1]-circY)
+                    if dist <= circRad:
+                        capture.set_setTrue(True)
      
 if __name__ == '__main__':
     main()
