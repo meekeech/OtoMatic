@@ -4,7 +4,7 @@ import cv2
 from imutils.video import FPS
 import imutils
 import time
-
+import numpy as np
 # for Messaging
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
@@ -13,13 +13,11 @@ import paho.mqtt.publish as publish
 # for Teensy
 import serial
 
-# for data reading
-import numpy as np
-
 # for thread messaging
 import queue
 
 messageQueue = queue.Queue()
+imageQueue = queue.Queue()
 
 
 ## for buttons
@@ -33,6 +31,9 @@ GPIO.setup(26, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 # Globals BAD
 running = 1
 printTrue = 0
+
+def current_milli_time():
+    return round(time.time() * 1000)
 
 #Thread listens for messages from the teensy and relays them to the Pi4
 class TeensyListener(Thread):
@@ -72,8 +73,9 @@ class TeensyListener(Thread):
             # if data available, read and put in message queue
             if self.ser.in_waiting > 2 and self.ser.isOpen():
                 msg = self.ser.readline().decode()
-                
+                msg = 'Test' + msg
                 messageQueue.put(msg)
+                #print(msg)
                 
                 if printTrue == True:
                     print('BLA')
@@ -83,7 +85,7 @@ class TeensyListener(Thread):
 #                print('ackkk')
                 msg = "D\r"
                 self.ser.write(msg.encode())
-                time.sleep(0.01)
+                time.sleep(0.1)
 
 #Thread polls the camera at set frame rate and updates the screen
 class VideoStream:
@@ -107,7 +109,8 @@ class VideoStream:
         f = open(fileName,"rb")
         data = f.read()
         byteArr = bytearray(data)
-        messageQueue.put(byteArr)       
+        imageQueue.put(byteArr) 
+        print('Sending Image')      
 
     def start(self):
         # start the thread to read frames from the video stream
@@ -142,12 +145,12 @@ class VideoStream:
 class MessageStream:
     def __init__(self):
         self.PI4_SERVER = "192.168.0.139"
-        self.PI4_PATH2 = "piz2-pi4-data"
+        self.dataMSG = "piz2-pi4-data"
+        self.imgMSG = "piz2-pi4-img"
         self.stopped = False
 
     def start(self):
         # start the thread to read frames from the video stream
-        
         self.thread = Thread(target=self.update, args=())
         self.thread.daemon = True
         self.thread.start()
@@ -161,21 +164,27 @@ class MessageStream:
                 return
 
             print(messageQueue.qsize())
-            if messageQueue.qsize() > 0:
+            while (messageQueue.qsize() > 0):
                 msg = messageQueue.get()
-                publish.single(self.PI4_PATH2,msg,hostname = self.PI4_SERVER)
+                publish.single(self.dataMSG,msg,hostname = self.PI4_SERVER)
+                messageQueue.task_done()
+                #print(messageQueue.qsize())
+
+            while (imageQueue.qsize() > 0):
+                msg = imageQueue.get()
+                publish.single(self.imgMSG,msg,hostname = self.PI4_SERVER)
+                imageQueue.task_done()
 
             time.sleep(0.1)
 
     def stop(self):
         # indicate that the thread should be stopped
         self.stopped = True	        
-        
 
 
 def main():  
     #start Camera grabbing     
-    vs = VideoStream(src=0).start()
+    vs = VideoStream(src=-1).start()
     fps = FPS().start()
 
     #start arduino listener
@@ -183,7 +192,7 @@ def main():
 
     # start message Stream
     ms = MessageStream().start()
-
+    t0 = time.time()
 
     while(running):
         try:
@@ -194,6 +203,10 @@ def main():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
         fps.update()
+        t1 = time.time()
+        if (t1-t0) >= 1.0:
+            t0 = t1
+            vs.send_snapshot()
     fps.stop()
     print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
     print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
