@@ -1,4 +1,6 @@
 from __future__ import print_function
+
+import threading
 from threading import Thread
 import cv2
 from imutils.video import FPS
@@ -164,11 +166,19 @@ def BChange(new_val):
     changeType = 'bgr'
         
 #Thread polls the camera at set frame rate and updates the screen
-class VideoStream:
+class VideoStream(threading.Thread):
     def __init__(self, src=0):
+       #super(Job, self).__init__(*args, **kwargs)
+        # ~ super(VideoStream, self).__init__(src)
+        super().__init__()
+        self.flag = threading.Event()
+        self.flag.set()
+        self.running = threading.Event()
+        self.running.set()
+        
         # initialize the video camera stream and read the first frame
         # from the stream
-        self.stream = cv2.VideoCapture(src)
+        self.stream = cv2.VideoCapture(0)
         self.stream.set(cv2.CAP_PROP_BUFFERSIZE,2)
         (self.grabbed, self.frame) = self.stream.read()
         cv2.namedWindow("PIC", cv2.WND_PROP_FULLSCREEN)
@@ -201,21 +211,23 @@ class VideoStream:
 
     def start(self):
         # start the thread to read frames from the video stream
-        self.thread = Thread(target=self.update, args=())
+        self.thread = Thread(target=self.run, args=())
         self.thread.daemon = True
         self.thread.start()
         return self
         
-    def update(self):
+    def run(self):
         # keep looping infinitely until the thread is stopped
-        while True:
+        while self.running.isSet():
+            self.flag.wait()
             # if the thread indicator variable is set, stop the thread
-            if self.stopped or self.paused: 
+            if self.stopped: 
                 return
             # otherwise, read the next frame from the stream
             (self.grabbed, self.frame) = self.stream.read()
             #self.newPic = True
             time.sleep(self.FPS)
+    
     def read(self):
         # return the frame most recently read
         return self.frame
@@ -248,10 +260,22 @@ class VideoStream:
         cv2.imshow('PIC',self.frame)
         #self.newPic = False
         cv2.waitkey(self.FPS_MS)
+    
+    def pause(self):
+        print("pausing")
+        self.flag.clear()
+        
+    def resume(self):
+        print("resuming")
+        self.flag.set()    
+        
     def stop(self):
         # indicate that the thread should be stopped
         print('Closing Video Stream')
         self.stopped = True	
+        self.flag.set() # Resume the thread from the suspended state, if it is already suspended
+        self.running.clear() # Set to False
+        
         
         
 class MessageStream:
@@ -311,24 +335,28 @@ def main():
     # start message Stream
     # ~ ms = MessageStream().start()
     t0 = time.time()
+    show = True
 
     while(running):
         pass
         try:
             pass
-            vs.show_frame()
+            if show is True:
+                vs.show_frame()
         except AttributeError: 
             pass
             
         inputVal = cv2.waitKey(1) & 0xFF    
             
         if inputVal == ord('p'):
-            vs.FPS_MS = int(1 * 1000)
+            #vs.pause()
             print("fps")
+            show = False
             
         
         elif inputVal == ord('r'):
-            vs = VideoStream(src=0).start()
+            #vs.resume()
+            show = True
             
         elif inputVal == ord('q'):
             break
